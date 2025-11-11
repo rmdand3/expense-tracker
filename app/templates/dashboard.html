@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ username }}!</h1>
+
+    <div class="stats-grid">
+        <div class="stat-card expenses">
+            <div class="stat-icon">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Expenses</h3>
+                <p class="stat-value">₹{{ "%.2f"|format(stats.total_expenses) }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card debts">
+            <div class="stat-icon">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Debts</h3>
+                <p class="stat-value">₹{{ "%.2f"|format(stats.total_debts) }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card savings">
+            <div class="stat-icon">
+                <i class="fas fa-piggy-bank"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Savings</h3>
+                <p class="stat-value">₹{{ "%.2f"|format(stats.total_savings) }}</p>
+            </div>
+        </div>
+
+        <div class="stat-card balance {% if stats.net_balance >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-icon">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Net Balance</h3>
+                <p class="stat-value">₹{{ "%.2f"|format(stats.net_balance) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="chart-section">
+            <h2><i class="fas fa-chart-pie"></i> Expenses by Category</h2>
+            <canvas id="categoryChart"></canvas>
+        </div>
+
+        <div class="recent-section">
+            <h2><i class="fas fa-clock"></i> Recent Expenses</h2>
+            {% if recent_expenses %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in recent_expenses %}
+                    <tr>
+                        <td>{{ expense.date }}</td>
+                        <td><span class="category-badge">{{ expense.category }}</span></td>
+                        <td>{{ expense.description }}</td>
+                        <td class="amount">₹{{ "%.2f"|format(expense.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{{ url_for('expenses') }}" class="btn btn-secondary">View All Expenses</a>
+            {% else %}
+            <p class="no-data">No expenses recorded yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="openModal('expenseModal')">
+                <i class="fas fa-plus"></i> Add Expense
+            </button>
+            <button class="btn btn-primary" onclick="openModal('debtModal')">
+                <i class="fas fa-plus"></i> Add Debt
+            </button>
+            <button class="btn btn-primary" onclick="openModal('savingModal')">
+                <i class="fas fa-plus"></i> Add Saving
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div id="expenseModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('expenseModal')">&times;</span>
+        <h2><i class="fas fa-receipt"></i> Add Expense</h2>
+        <form id="expenseForm">
+            <div class="form-group">
+                <label for="expenseDate">Date</label>
+                <input type="date" id="expenseDate" required>
+            </div>
+            <div class="form-group">
+                <label for="expenseCategory">Category</label>
+                <select id="expenseCategory" required>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="expenseDescription">Description</label>
+                <input type="text" id="expenseDescription" required>
+            </div>
+            <div class="form-group">
+                <label for="expenseAmount">Amount (₹)</label>
+                <input type="number" id="expenseAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="expensePayment">Payment Method</label>
+                <select id="expensePayment" required>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Net Banking">Net Banking</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="expenseNotes">Notes</label>
+                <textarea id="expenseNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Expense</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Debt Modal -->
+<div id="debtModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('debtModal')">&times;</span>
+        <h2><i class="fas fa-hand-holding-usd"></i> Add Debt</h2>
+        <form id="debtForm">
+            <div class="form-group">
+                <label for="debtDate">Date</label>
+                <input type="date" id="debtDate" required>
+            </div>
+            <div class="form-group">
+                <label for="debtCreditor">Creditor/Debtor Name</label>
+                <input type="text" id="debtCreditor" required>
+            </div>
+            <div class="form-group">
+                <label for="debtType">Type</label>
+                <select id="debtType" required>
+                    <option value="Owed to me">Owed to me</option>
+                    <option value="I owe">I owe</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="debtAmount">Amount (₹)</label>
+                <input type="number" id="debtAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="debtStatus">Status</label>
+                <select id="debtStatus" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                    <option value="Paid">Paid</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="debtDueDate">Due Date</label>
+                <input type="date" id="debtDueDate">
+            </div>
+            <div class="form-group">
+                <label for="debtNotes">Notes</label>
+                <textarea id="debtNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Debt</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Saving Modal -->
+<div id="savingModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('savingModal')">&times;</span>
+        <h2><i class="fas fa-piggy-bank"></i> Add Saving</h2>
+        <form id="savingForm">
+            <div class="form-group">
+                <label for="savingDate">Date</label>
+                <input type="date" id="savingDate" required>
+            </div>
+            <div class="form-group">
+                <label for="savingType">Type</label>
+                <select id="savingType" required>
+                    <option value="Fixed Deposit">Fixed Deposit</option>
+                    <option value="Mutual Fund">Mutual Fund</option>
+                    <option value="Stocks">Stocks</option>
+                    <option value="PPF">PPF</option>
+                    <option value="Savings Account">Savings Account</option>
+                    <option value="Emergency Fund">Emergency Fund</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="savingDescription">Description</label>
+                <input type="text" id="savingDescription" required>
+            </div>
+            <div class="form-group">
+                <label for="savingAmount">Amount (₹)</label>
+                <input type="number" id="savingAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="savingGoal">Goal</label>
+                <input type="text" id="savingGoal" placeholder="e.g., Vacation, Car, House">
+            </div>
+            <div class="form-group">
+                <label for="savingNotes">Notes</label>
+                <textarea id="savingNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Saving</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Set today's date as default
+document.getElementById('expenseDate').valueAsDate = new Date();
+document.getElementById('debtDate').valueAsDate = new Date();
+document.getElementById('savingDate').valueAsDate = new Date();
+
+// Category Chart
+const categoryData = {{ stats.category_expenses | tojson }};
+const ctx = document.getElementById('categoryChart').getContext('2d');
+
+if (Object.keys(categoryData).length > 0) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(categoryData),
+            datasets: [{
+                data: Object.values(categoryData),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF9F40',
+                    '#36A2EB', '#FFCE56'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+} else {
+    document.getElementById('categoryChart').parentElement.innerHTML = '<p class="no-data">No expense data available for chart.</p>';
+}
+
+// Form submissions
+document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await addEntry('/api/add_expense', {
+        date: document.getElementById('expenseDate').value,
+        category: document.getElementById('expenseCategory').value,
+        description: document.getElementById('expenseDescription').value,
+        amount: document.getElementById('expenseAmount').value,
+        payment_method: document.getElementById('expensePayment').value,
+        notes: document.getElementById('expenseNotes').value
+    }, 'expenseModal');
+});
+
+document.getElementById('debtForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await addEntry('/api/add_debt', {
+        date: document.getElementById('debtDate').value,
+        creditor: document.getElementById('debtCreditor').value,
+        type: document.getElementById('debtType').value,
+        amount: document.getElementById('debtAmount').value,
+        status: document.getElementById('debtStatus').value,
+        due_date: document.getElementById('debtDueDate').value,
+        notes: document.getElementById('debtNotes').value
+    }, 'debtModal');
+});
+
+document.getElementById('savingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await addEntry('/api/add_saving', {
+        date: document.getElementById('savingDate').value,
+        type: document.getElementById('savingType').value,
+        description: document.getElementById('savingDescription').value,
+        amount: document.getElementById('savingAmount').value,
+        goal: document.getElementById('savingGoal').value,
+        notes: document.getElementById('savingNotes').value
+    }, 'savingModal');
+});
+
+async function addEntry(url, data, modalId) {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            closeModal(modalId);
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+}
+</script>
+{% endblock %}

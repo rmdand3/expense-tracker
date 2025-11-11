@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Savings - Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-piggy-bank"></i> Savings</h1>
+    <button class="btn btn-primary" onclick="openModal('savingModal')">
+        <i class="fas fa-plus"></i> Add Saving
+    </button>
+</div>
+
+<div class="savings-page">
+    {% if savings %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Goal</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for saving in savings %}
+            <tr>
+                <td>{{ saving.date }}</td>
+                <td><span class="saving-type-badge">{{ saving.type }}</span></td>
+                <td>{{ saving.description }}</td>
+                <td class="amount positive">₹{{ "%.2f"|format(saving.amount) }}</td>
+                <td>{{ saving.goal or 'N/A' }}</td>
+                <td>{{ saving.notes }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data-card">
+        <i class="fas fa-piggy-bank"></i>
+        <p>No savings recorded yet.</p>
+        <button class="btn btn-primary" onclick="openModal('savingModal')">
+            <i class="fas fa-plus"></i> Add Your First Saving
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Saving Modal -->
+<div id="savingModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('savingModal')">&times;</span>
+        <h2><i class="fas fa-piggy-bank"></i> Add Saving</h2>
+        <form id="savingForm">
+            <div class="form-group">
+                <label for="savingDate">Date</label>
+                <input type="date" id="savingDate" required>
+            </div>
+            <div class="form-group">
+                <label for="savingType">Type</label>
+                <select id="savingType" required>
+                    <option value="Fixed Deposit">Fixed Deposit</option>
+                    <option value="Mutual Fund">Mutual Fund</option>
+                    <option value="Stocks">Stocks</option>
+                    <option value="PPF">PPF</option>
+                    <option value="Savings Account">Savings Account</option>
+                    <option value="Emergency Fund">Emergency Fund</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="savingDescription">Description</label>
+                <input type="text" id="savingDescription" required>
+            </div>
+            <div class="form-group">
+                <label for="savingAmount">Amount (₹)</label>
+                <input type="number" id="savingAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="savingGoal">Goal</label>
+                <input type="text" id="savingGoal" placeholder="e.g., Vacation, Car, House">
+            </div>
+            <div class="form-group">
+                <label for="savingNotes">Notes</label>
+                <textarea id="savingNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Saving</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('savingDate').valueAsDate = new Date();
+
+document.getElementById('savingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+        date: document.getElementById('savingDate').value,
+        type: document.getElementById('savingType').value,
+        description: document.getElementById('savingDescription').value,
+        amount: document.getElementById('savingAmount').value,
+        goal: document.getElementById('savingGoal').value,
+        notes: document.getElementById('savingNotes').value
+    };
+
+    try {
+        const response = await fetch('/api/add_saving', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            closeModal('savingModal');
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+});
+</script>
+{% endblock %}

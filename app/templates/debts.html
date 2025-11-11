@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Debts - Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-hand-holding-usd"></i> Debts</h1>
+    <button class="btn btn-primary" onclick="openModal('debtModal')">
+        <i class="fas fa-plus"></i> Add Debt
+    </button>
+</div>
+
+<div class="debts-page">
+    {% if debts %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Creditor/Debtor</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for debt in debts %}
+            <tr>
+                <td>{{ debt.date }}</td>
+                <td>{{ debt.creditor }}</td>
+                <td><span class="debt-type-badge {{ 'owed-to-me' if debt.type == 'Owed to me' else 'i-owe' }}">{{ debt.type }}</span></td>
+                <td class="amount">₹{{ "%.2f"|format(debt.amount) }}</td>
+                <td><span class="status-badge {{ debt.status.lower().replace(' ', '-') }}">{{ debt.status }}</span></td>
+                <td>{{ debt.due_date or 'N/A' }}</td>
+                <td>{{ debt.notes }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data-card">
+        <i class="fas fa-hand-holding-usd"></i>
+        <p>No debts recorded yet.</p>
+        <button class="btn btn-primary" onclick="openModal('debtModal')">
+            <i class="fas fa-plus"></i> Add Your First Debt
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Debt Modal -->
+<div id="debtModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('debtModal')">&times;</span>
+        <h2><i class="fas fa-hand-holding-usd"></i> Add Debt</h2>
+        <form id="debtForm">
+            <div class="form-group">
+                <label for="debtDate">Date</label>
+                <input type="date" id="debtDate" required>
+            </div>
+            <div class="form-group">
+                <label for="debtCreditor">Creditor/Debtor Name</label>
+                <input type="text" id="debtCreditor" required>
+            </div>
+            <div class="form-group">
+                <label for="debtType">Type</label>
+                <select id="debtType" required>
+                    <option value="Owed to me">Owed to me</option>
+                    <option value="I owe">I owe</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="debtAmount">Amount (₹)</label>
+                <input type="number" id="debtAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="debtStatus">Status</label>
+                <select id="debtStatus" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                    <option value="Paid">Paid</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="debtDueDate">Due Date</label>
+                <input type="date" id="debtDueDate">
+            </div>
+            <div class="form-group">
+                <label for="debtNotes">Notes</label>
+                <textarea id="debtNotes" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Debt</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('debtDate').valueAsDate = new Date();
+
+document.getElementById('debtForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+        date: document.getElementById('debtDate').value,
+        creditor: document.getElementById('debtCreditor').value,
+        type: document.getElementById('debtType').value,
+        amount: document.getElementById('debtAmount').value,
+        status: document.getElementById('debtStatus').value,
+        due_date: document.getElementById('debtDueDate').value,
+        notes: document.getElementById('debtNotes').value
+    };
+
+    try {
+        const response = await fetch('/api/add_debt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            closeModal('debtModal');
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('An error occurred. Please try again.');
+    }
+});
+</script>
+{% endblock %}
