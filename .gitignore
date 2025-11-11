@@ -46,6 +46,8 @@ data/
 
 # Logs
 *.log
+nohup.out
+app.log
 
 # Environment variables
 .env
@@ -55,6 +57,7 @@ data/
 .pytest_cache/
 .coverage
 htmlcov/
+cookies.txt
 
 # OS
 Thumbs.db
